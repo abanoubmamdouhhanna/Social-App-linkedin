@@ -1,0 +1,31 @@
+{
+  "name": "social-app",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^1.35.0",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "file-type": "^19.6.0",
+    "joi": "^17.9.1",
+    "jsonwebtoken": "^9.0.0",
+    "moment": "^2.29.4",
+    "mongoose": "^7.0.3",
+    "multer": "^1.4.5-lts.1",
+    "nanoid": "^4.0.2",
+    "nodemailer": "^6.9.1",
+    "otp-generator": "^4.0.1",
+    "pdfkit": "^0.13.0",
+    "slugify": "^1.6.6"
+  }
+}
