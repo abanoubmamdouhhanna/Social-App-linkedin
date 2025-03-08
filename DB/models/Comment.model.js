@@ -16,13 +16,18 @@ const commentSchema = new Schema(
       ref: "Post",
       required: true,
     },
+
+    reply: [{ type: Types.ObjectId, ref: "Comment" }],
+
+    isReply: { type: Boolean, default: false },
+
     reactions: {
-      like: [{ type:Types.ObjectId, ref: 'User' }],
-      celebrate: [{ type:Types.ObjectId, ref: 'User' }],
-      support: [{ type:Types.ObjectId, ref: 'User' }],
-      insightful: [{ type:Types.ObjectId, ref: 'User' }],
-      funny: [{ type:Types.ObjectId, ref: 'User' }],
-      love: [{ type:Types.ObjectId, ref: 'User' }]
+      like: [{ type: Types.ObjectId, ref: "User" }],
+      celebrate: [{ type: Types.ObjectId, ref: "User" }],
+      support: [{ type: Types.ObjectId, ref: "User" }],
+      insightful: [{ type: Types.ObjectId, ref: "User" }],
+      funny: [{ type: Types.ObjectId, ref: "User" }],
+      love: [{ type: Types.ObjectId, ref: "User" }],
     },
     isDeleted: {
       type: Boolean,
@@ -31,17 +36,16 @@ const commentSchema = new Schema(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true ,transform: function(doc, ret) {
+    toJSON: {
+      virtuals: true,
+      transform: function (doc, ret) {
         ret.id = undefined;
-      }},
+      },
+    },
     toObject: { virtuals: true },
   }
 );
-commentSchema.virtual('replies', {
-  ref: 'Reply',
-  localField: '_id',
-  foreignField: 'commentId'
-})
+
 commentSchema.pre("find", function () {
   this.where({ isDeleted: false });
 });

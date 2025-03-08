@@ -1,7 +1,6 @@
 import crypto from "crypto";
 import UserModel from "../../../../DB/models/User.model.js";
 import moment from "moment/moment.js";
-import sendEmail from "../../../utils/Emails/sendEmail.js";
 import { activationMail } from "../../../utils/Emails/activationMail.js";
 import { passwordEmail } from "../../../utils/Emails/forgetPasswordEmail.js";
 import { otpEmail } from "../../../utils/Emails/optEmail.js";
@@ -12,6 +11,8 @@ import {
   generateToken,
   verifyToken,
 } from "../../../utils/generateAndVerifyToken.js";
+import { emitter } from "../../../utils/eventEmitter.js";
+import { emailres } from "../../../utils/Emails/emailres.js";
 
 // registeration
 export const signUp = asyncHandler(async (req, res, next) => {
@@ -56,12 +57,9 @@ export const signUp = asyncHandler(async (req, res, next) => {
   const host = req.headers.host;
   const html = activationMail(activationCode, protocol, host);
 
-  sendEmail({
-    to: email,
-    subject: "Confirmation mail",
+  emitter.emit("register", {
+    email,
     html,
-  }).catch((err) => {
-    console.error("Failed to send email:", err);
   });
 
   // Respond immediately without waiting for the email to be sent
@@ -75,7 +73,7 @@ export const signUp = asyncHandler(async (req, res, next) => {
 
 // log in
 export const logIn = asyncHandler(async (req, res, next) => {
-  const { userNameOrEmail, password } = req.body;
+  const { userNameOrEmail, password, rememberMe } = req.body;
 
   // Validate input data
   if (!password || !userNameOrEmail) {
@@ -86,7 +84,7 @@ export const logIn = asyncHandler(async (req, res, next) => {
 
   // Query user by either userName or email
   const user = await UserModel.findOne({
-    $or: [{ userName:userNameOrEmail }, { email:userNameOrEmail }],
+    $or: [{ userName: userNameOrEmail }, { email: userNameOrEmail }],
   }).select("password isDeleted isBlocked isConfirmed userName email");
 
   // Handle user not found or inactive accounts
@@ -121,22 +119,45 @@ export const logIn = asyncHandler(async (req, res, next) => {
       new Error("Incorrect password. Please try again.", { cause: 401 })
     );
   }
-
+  const tokenExpiry = rememberMe ? "30d" : "1h";
   // Generate JWT token
   const token = generateToken({
-    payload: { id: user._id, userName: user.userName, email: user.email ,role:user.role},
+    payload: {
+      id: user._id,
+      userName: user.userName,
+      email: user.email,
+      role: user.role,
+    },
+    expiresIn: tokenExpiry,
+  });
+  res.cookie("jwt", token, {
+    maxAge: rememberMe ? 30 * 24 * 60 * 60 * 1000 : null,
+    httpOnly: true,
+    sameSite: "None",
+    secure: true,
   });
 
-  // Update status (optional, based on your business logic)
-  if (user.status !== "online") {
-    user.status = "online";
+  let loggedIn = false;
+
+  if (user.status !== "Active") {
+    user.status = "Active";
+    loggedIn = true;
+  }
+
+  if (user.availability !== "Online") {
+    user.availability = "Online";
+    loggedIn = true;
+  }
+
+  if (loggedIn) {
     await user.save();
   }
 
   // Respond to client
   return res.status(200).json({
-    message: "Logged in successfully.",
+    message: `welcome ${user.role}! Logged in successfully.`,
     authorization: { token },
+    result: user,
   });
 });
 //====================================================================================================================//
@@ -144,9 +165,14 @@ export const logIn = asyncHandler(async (req, res, next) => {
 export const logOut = asyncHandler(async (req, res, next) => {
   await UserModel.findByIdAndUpdate(
     req.user._id,
-    { status: "offline" },
+    { availability: "offline" },
     { new: true }
   );
+  res.cookie("jwt", "", {
+    maxAge: 1,
+    sameSite: "None",
+    secure: true,
+  });
   return res.status(200).json({
     status: "success",
     message: "LoggedOut successfully",
@@ -166,7 +192,7 @@ export const activateAcc = asyncHandler(async (req, res, next) => {
   );
 
   return user.matchedCount
-    ? res.status(200).send("congratulations, your account is now activated")
+    ? res.status(200).send(emailres)
     : next(new Error("Account not found", { cause: 404 }));
 });
 //====================================================================================================================//
@@ -182,19 +208,13 @@ export const reActivateAcc = asyncHandler(async (req, res, next) => {
     const host = req.headers.host;
 
     const html = activationMail(user.activationCode, protocol, host);
-    const info = await sendEmail({
-      to: email,
-      subject: "New Confirmation mail",
+    emitter.emit("reActiveAccount", {
+      email,
       html,
     });
-    if (!info) {
-      return next(new Error("Rejected Email", { cause: 400 }));
-    }
-    return res
-      .status(200)
-      .json({
-        message: "Check your email we already sent an activation mail ",
-      });
+    return res.status(200).json({
+      message: "Check your email we already sent an activation mail ",
+    });
   }
   return next(new Error("Your account is already confirmed", { cause: 400 }));
 });
@@ -217,14 +237,10 @@ export const forgetPassword = asyncHandler(async (req, res, next) => {
   const link = `${req.protocol}://${req.headers.host}/auth/resetPassword/${forgetPasswordToken}`;
   const html = passwordEmail(link);
 
-  const info = await sendEmail({
-    to: email,
-    subject: "Forget Password",
+  emitter.emit("forgetPassword", {
+    email,
     html,
   });
-  if (!info) {
-    return next(new Error("Rejected Email", { cause: 400 }));
-  }
   return res.status(200).json({
     status: "success",
     message: "Reset email password sent to your account",
@@ -280,14 +296,10 @@ export const forgetPasswordOTP = asyncHandler(async (req, res, next) => {
   const redirectLink = `${req.protocol}://${req.headers.host}/auth/resetPasswordOTP/${email}`;
 
   const html = otpEmail(OTP, redirectLink);
-  const info = await sendEmail({
-    to: email,
-    subject: "Forget Password otp",
+  emitter.emit("forgetPassword", {
+    email,
     html,
   });
-  if (!info) {
-    return next(new Error("Rejected Email", { cause: 400 }));
-  }
   return res.status(200).json({
     status: "success",
     message: "OTP code have been sent to your account",

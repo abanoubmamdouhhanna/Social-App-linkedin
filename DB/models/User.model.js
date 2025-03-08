@@ -37,8 +37,13 @@ const userSchema = new Schema(
     },
     status: {
       type: String,
-      default: "offline",
-      enum: ["offline", "online"],
+      default: "not Active",
+      enum: ["Active", "not Active"],
+    },
+    availability: {
+      type: String,
+      default: "Offline",
+      enum: ["Online", "Offline"],
     },
     role: {
       type: String,

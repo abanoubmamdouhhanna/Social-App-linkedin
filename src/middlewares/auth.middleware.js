@@ -2,11 +2,6 @@ import UserModel from "../../DB/models/User.model.js";
 import { asyncHandler } from "../utils/errorHandling.js";
 import { verifyToken } from "../utils/generateAndVerifyToken.js";
 
-// export const roles = {
-//   SuperAdmin: "superAdmin",
-//   Admin: "admin",
-//   User: "user",
-// };
 export const auth = (accessRoles = []) => {
   return asyncHandler(async (req, res, next) => {
     const { authorization } = req.headers;
@@ -24,15 +19,34 @@ export const auth = (accessRoles = []) => {
     if (!authUser) {
       return next(new Error("not register account", { cause: 401 }));
     }
+    // Check if user is active
+    if (authUser.status !== "Active") {
+      return next(
+        new Error("Account is inactive or suspended", { cause: 403 })
+      );
+    }
+    if (authUser.availability == "Offline") {
+      return next(new Error("You are not logged in", { cause: 409 }));
+    }
     if (parseInt(authUser.changeAccountInfo?.getTime() / 1000) > decoded.iat) {
-      return next(new Error("Expired token ,please login again", { cause: 400 }));
+      return next(
+        new Error("Expired token ,please login again", { cause: 400 })
+      );
     }
     if (!authUser.isConfirmed) {
-      return next(new Error("You must activate your email", { cause: 400 }));
+      return next(new Error("You must activate your email", { cause: 409 }));
+    }
+    if (authUser.isDeleted || authUser.isBlocked) {
+      return next(
+        new Error(
+          "Your account suspended or removed , contact support for more information",
+          { cause: 403 }
+        )
+      );
     }
     if (!accessRoles.includes(authUser.role)) {
       return next(
-        new Error("You aren't authorized to take this action!", { cause: 400 })
+        new Error("You aren't authorized to take this action!", { cause: 403 })
       );
     }
     req.user = authUser;

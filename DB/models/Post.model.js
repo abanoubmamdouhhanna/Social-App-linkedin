@@ -3,13 +3,8 @@ import mongoose, { model, Schema, Types } from "mongoose";
 const postSchema = new Schema(
   {
     customId: String,
-    postTitle: {
-      type: String,
-      required: true,
-    },
     postContent: {
       type: String,
-      required: true,
     },
     reactions: {
       like: [{ type: Types.ObjectId, ref: "User" }],
@@ -19,11 +14,7 @@ const postSchema = new Schema(
       funny: [{ type: Types.ObjectId, ref: "User" }],
       love: [{ type: Types.ObjectId, ref: "User" }],
     },
-    postImages: [
-      {
-        imageUrl: { type: String, required: true },
-      },
-    ],
+    postImages: [{ type: String, required: true }],
     createdBy: { type: Types.ObjectId, ref: "User", required: true },
     isDeleted: { type: Boolean, default: false },
     isPrivate: { type: Boolean, default: false },

@@ -11,11 +11,12 @@ export const getAllUsers = asyncHandler(async (req, res, next) => {
     AllUsers: allUsers,
   });
 });
-
+//====================================================================================================================//
 //all online users
+
 export const onlineUsers = asyncHandler(async (req, res, next) => {
   const users = await userModel
-    .find({ status: "online" })
+    .find({ availability: "Online" })
     .select("firstName lastName email");
   return res.status(200).json({
     status: "Success",
@@ -25,7 +26,9 @@ export const onlineUsers = asyncHandler(async (req, res, next) => {
   });
 });
 
+//====================================================================================================================//
 //block user
+
 export const blockUser = asyncHandler(async (req, res, next) => {
   const user = await userModel.findById(req.params.userId);
   if (!user) {
@@ -52,7 +55,9 @@ export const blockUser = asyncHandler(async (req, res, next) => {
   });
 });
 
+//====================================================================================================================//
 //unblock user
+
 export const unBlockUser = asyncHandler(async (req, res, next) => {
   const { userId } = req.params;
   const user = await userModel.findByIdAndUpdate(
