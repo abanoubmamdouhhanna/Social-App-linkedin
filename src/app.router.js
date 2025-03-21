@@ -1,7 +1,7 @@
 import cookieParser from "cookie-parser"
 import connectDB from "../DB/connection.js";
 import { glopalErrHandling } from "./utils/errorHandling.js";
-import postrRouter from './modules/posts/posts.router.js'
+import postrRouter from './modules/Posts/posts.router.js'
 import authRouter from './modules/Auth/auth.router.js'
 import adminRouter from './modules/Admin/admin.router.js'
 

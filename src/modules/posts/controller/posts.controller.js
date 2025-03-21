@@ -30,7 +30,7 @@ export const getAllPosts = asyncHandler(async (req, res, next) => {
   const AllPosts = await postModel
     .find({
       $or: [
-        { createdBy: { $in: user.connections.accepted } },
+        { createdBy: { $in: user.follow.accepted } },
         { createdBy: req.user._id },
       ],
       isPrivate: false,
@@ -60,6 +60,7 @@ export const getAllPosts = asyncHandler(async (req, res, next) => {
       // },
     ]);
   const posts = AllPosts.filter((post) => post.createdBy != null);
+  await Promise.all(posts.map((post) => post.incrementViews()));
   const postsWithReactionFlag = posts.map((post) => {
     const postObj = post.toObject
       ? post.toObject()
@@ -125,6 +126,7 @@ export const getMyAllPosts = asyncHandler(async (req, res, next) => {
       // },
     ]);
   const posts = AllPosts.filter((post) => post.createdBy != null);
+  await Promise.all(posts.map((post) => post.incrementViews()));
   const postsWithReactionFlag = posts.map((post) => {
     const postObj = post.toObject
       ? post.toObject()
@@ -195,6 +197,7 @@ export const getUserAllPosts = asyncHandler(async (req, res, next) => {
       // },
     ]);
   const posts = AllPosts.filter((post) => post.createdBy != null);
+  await Promise.all(posts.map((post) => post.incrementViews()));
   const postsWithReactionFlag = posts.map((post) => {
     const postObj = post.toObject
       ? post.toObject()
@@ -225,6 +228,16 @@ export const getUserAllPosts = asyncHandler(async (req, res, next) => {
 //====================================================================================================================//
 //add post
 export const addPost = asyncHandler(async (req, res, next) => {
+  const { postContent,tags } = req.body;
+  if ( !postContent) {
+    return next(new Error("Content is required", { cause: 400 }));
+  }
+if (tags) {
+  const formattedTags = Array.isArray(tags)
+  ? tags.map((tag) => tag.trim().toLowerCase())
+  : []; 
+  req.body.tags=formattedTags
+}
   const customId = nanoid();
   if (req.files?.postImages?.length) {
     const uploadedImages = await Promise.all(
@@ -463,5 +476,77 @@ export const privatePost = asyncHandler(async (req, res, next) => {
     status: "success",
     message: "Post privacy updated",
     result: post,
+  });
+});
+
+//====================================================================================================================//
+//add tag to post
+
+export const addTagsToPost = asyncHandler(async (req, res, next) => {
+  const { postId } = req.params;
+  const { tags } = req.body;
+
+  if (!tags || !Array.isArray(tags)) {
+    return next(new Error("Tags must be an array", { cause: 400 }));
+  }
+
+  const formattedTags = tags.map((tag) => tag.trim().toLowerCase());
+
+  const updatedPost = await postModel.findByIdAndUpdate(
+    postId,
+    { $addToSet: { tags: { $each: formattedTags } } }, // Prevents duplicate tags
+    { new: true }
+  );
+
+  if (!updatedPost) {
+    return next(new Error("Post not found", { cause: 404 }));
+  }
+
+  return res.status(200).json({
+    status: "success",
+    message: "Tags added successfully",
+    post: updatedPost,
+  });
+});
+
+//====================================================================================================================//
+//remove tag from post
+
+export const removeTagFromPost = asyncHandler(async (req, res, next) => {
+  const { postId } = req.params;
+  const { tag } = req.body;
+
+  if (!tag) {
+    return next(new Error("Tag is required", { cause: 400 }));
+  }
+
+  const updatedPost = await postModel.findByIdAndUpdate(
+    postId,
+    { $pull: { tags: tag.toLowerCase() } }, // Removes tag from array
+    { new: true }
+  );
+
+  if (!updatedPost) {
+    return next(new Error("Post not found", { cause: 404 }));
+  }
+
+  return res.status(200).json({
+    status: "success",
+    message: "Tag removed successfully",
+    post: updatedPost,
+  });
+});
+
+//====================================================================================================================//
+//get post by tag
+export const getPostsByTag = asyncHandler(async (req, res, next) => {
+  const { tagName } = req.params;
+
+  const posts = await postModel.findByTag(tagName);
+
+  return res.status(200).json({
+    status: "success",
+    posts_count: posts.length,
+    posts,
   });
 });

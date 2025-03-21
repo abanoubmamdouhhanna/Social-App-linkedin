@@ -16,9 +16,23 @@ const ERROR_MESSAGES = {
   postIdRequired: "Post ID is required",
   invalidReaction: `Reaction must be one of: ${REACTION_TYPES.join(", ")}`,
 };
+const tags = joi
+  .array()
+  .items(joi.string().trim().min(2).max(30))
+  .unique() // Prevents duplicate tags
+  .min(0) // Allow empty array
+  .max(10) // Limit number of tags
+  .default([]) // Default to empty array
+  .messages({
+    "array.unique": "Duplicate tags are not allowed",
+    "array.max": "Maximum of 10 tags allowed",
+    "string.min": "Each tag must be at least 2 characters",
+    "string.max": "Each tag must be at most 30 characters",
+    "string.empty": "Tag cannot be empty",
+  })
+  .description("List of tags associated with the content");
 
-export const headersSchema= generalFeilds.headers
-
+export const headersSchema = generalFeilds.headers;
 
 /**
  * Validates post creation with images and content
@@ -41,6 +55,7 @@ export const addPostSchema = joi
       "string.empty": "Post content is required",
       "any.required": "Post content is required",
     }),
+    tags: tags,
   })
   .required()
   .messages({
@@ -118,20 +133,20 @@ export const postIdSchema = joi
     "object.base": ERROR_MESSAGES.objectBase,
   });
 
-  /**
+/**
  * Validates operations that only require a user ID
  */
 export const userIdSchema = joi
-.object({
-  userId: generalFeilds.id.required().messages({
-    "any.required": "User ID is required",
-    "string.empty": "User ID is required",
-  }),
-})
-.required()
-.messages({
-  "object.base": ERROR_MESSAGES.objectBase,
-});
+  .object({
+    userId: generalFeilds.id.required().messages({
+      "any.required": "User ID is required",
+      "string.empty": "User ID is required",
+    }),
+  })
+  .required()
+  .messages({
+    "object.base": ERROR_MESSAGES.objectBase,
+  });
 
 /**
  * Validates private Post Schema
@@ -147,6 +162,33 @@ export const privatePostSchema = joi
       "string.empty": "Privacy is required",
       "any.required": "Privacy is required",
     }),
+  })
+  .required()
+  .messages({
+    "object.base": ERROR_MESSAGES.objectBase,
+  });
+/**
+ * Validates add/remove tag to/from Post Schema
+ */
+export const addTagsToPostSchema = joi
+  .object({
+    postId: generalFeilds.id.required().messages({
+      "any.required": ERROR_MESSAGES.postIdRequired,
+      "string.empty": ERROR_MESSAGES.postIdRequired,
+    }),
+    tags: tags,
+  })
+  .required()
+  .messages({
+    "object.base": ERROR_MESSAGES.objectBase,
+  });
+
+/**
+ * Validates get post by tag Schema
+ */
+export const getPostsByTagSchema = joi
+  .object({
+    tagName: joi.string().trim().min(2).max(30),
   })
   .required()
   .messages({

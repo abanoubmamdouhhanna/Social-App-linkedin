@@ -1,7 +1,8 @@
 import mongoose, { model, Schema, Types } from "mongoose";
 
 const userSchema = new Schema(
-  {userName: {
+  {customId:String,
+    userName: {
     type: String,
     min: 3,
     max: 20,
@@ -56,7 +57,7 @@ const userSchema = new Schema(
       enum: ["male", "female"],
       required: true,
     },
-    connections: {
+    follow: {
       requested: [{ type: Types.ObjectId, ref: "User" }],
       accepted: [{ type: Types.ObjectId, ref: "User" }],
     },
@@ -72,6 +73,7 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    DOB: Date,
     headline: String,
     activationCode: String,
     otp: String,
@@ -80,6 +82,7 @@ const userSchema = new Schema(
     coverURL: String,
     changeAccountInfo: Date,
     permanentlyDeleted: Date,
+    lastRecovered:Date
   },
   {
     timestamps: true,

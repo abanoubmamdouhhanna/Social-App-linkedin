@@ -4,11 +4,21 @@ import fs from "fs";
 import { asyncHandler } from "./errorHandling.js";
 import { dangerousExtensions } from "./dangerousExtensions.js";
 
-export const allowedTypesMap = {
-  postImages: ["image/png", "image/jpeg"],
-  
-};
+export const allowedTypesMap = (() => {
+  const postImages = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+  const profileImages= ["image/png", "image/jpeg"];
+  const documentTypes = [
+    "application/pdf",
+    "application/msword", // .doc
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+  ];
 
+  return {
+    postImages:postImages,
+    profile:profileImages,
+    cover:profileImages
+  };
+})();
 const fileValidation = (allowedTypesMap = {}) => {
   return asyncHandler(async (req, file, cb) => {
     const fileExtension = file.originalname.split(".").pop().toLowerCase();

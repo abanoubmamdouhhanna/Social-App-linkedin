@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import UserModel from "../../../../DB/models/User.model.js";
+import userModel from "../../../../DB/models/User.model.js";
 import moment from "moment/moment.js";
 import { activationMail } from "../../../utils/Emails/activationMail.js";
 import { passwordEmail } from "../../../utils/Emails/forgetPasswordEmail.js";
@@ -18,11 +18,12 @@ import { emailres } from "../../../utils/Emails/emailres.js";
 export const signUp = asyncHandler(async (req, res, next) => {
   const { userName, firstName, lastName, email, password, age, gender, phone } =
     req.body;
+    const customId = nanoid();
 
   // Run the email and username existence checks in parallel
   const [existedUser, checkExistUserName] = await Promise.all([
-    UserModel.findOne({ email }),
-    UserModel.findOne({ userName }),
+    userModel.findOne({ email }),
+    userModel.findOne({ userName }),
   ]);
 
   if (existedUser) {
@@ -40,7 +41,8 @@ export const signUp = asyncHandler(async (req, res, next) => {
   const hashPassword = Hash({ plainText: password });
 
   // Create the user in the database
-  const createUser = await UserModel.create({
+  const createUser = await userModel.create({
+    customId,
     userName,
     firstName,
     lastName,
@@ -83,7 +85,7 @@ export const logIn = asyncHandler(async (req, res, next) => {
   }
 
   // Query user by either userName or email
-  const user = await UserModel.findOne({
+  const user = await userModel.findOne({
     $or: [{ userName: userNameOrEmail }, { email: userNameOrEmail }],
   }).select("password isDeleted isBlocked isConfirmed userName email");
 
@@ -163,7 +165,7 @@ export const logIn = asyncHandler(async (req, res, next) => {
 //====================================================================================================================//
 //log out
 export const logOut = asyncHandler(async (req, res, next) => {
-  await UserModel.findByIdAndUpdate(
+  await userModel.findByIdAndUpdate(
     req.user._id,
     { availability: "offline" },
     { new: true }
@@ -183,7 +185,7 @@ export const logOut = asyncHandler(async (req, res, next) => {
 // Activate account
 
 export const activateAcc = asyncHandler(async (req, res, next) => {
-  const user = await UserModel.updateOne(
+  const user = await userModel.updateOne(
     { activationCode: req.params.activationCode },
     {
       isConfirmed: true,
@@ -199,7 +201,7 @@ export const activateAcc = asyncHandler(async (req, res, next) => {
 //Re-Activate account
 export const reActivateAcc = asyncHandler(async (req, res, next) => {
   const { email } = req.params;
-  const user = await UserModel.findOne({ email });
+  const user = await userModel.findOne({ email });
   if (!user) {
     return next(new Error("User not found", { cause: 404 }));
   }
@@ -224,7 +226,7 @@ export const reActivateAcc = asyncHandler(async (req, res, next) => {
 export const forgetPassword = asyncHandler(async (req, res, next) => {
   const { email } = req.body;
 
-  const user = await UserModel.findOne({ email });
+  const user = await userModel.findOne({ email });
   if (!user) {
     return next(new Error("User not found!", { cause: 404 }));
   }
@@ -257,7 +259,7 @@ export const resetPassword = async (req, res, next) => {
     payload: fp_token,
     signature: process.env.FORGET_PASSWORD_SIGNATURE,
   });
-  const user = await UserModel.findOne({ email });
+  const user = await userModel.findOne({ email });
   const match = compare({ plainText: password, hashValue: user.password });
 
   if (match) {
@@ -265,7 +267,7 @@ export const resetPassword = async (req, res, next) => {
       new Error("New password can't be old password", { cause: 400 })
     );
   }
-  await UserModel.updateOne(
+  await userModel.updateOne(
     { email },
     {
       password: Hash({ plainText: password }),
@@ -281,12 +283,12 @@ export const resetPassword = async (req, res, next) => {
 export const forgetPasswordOTP = asyncHandler(async (req, res, next) => {
   const { email } = req.body;
 
-  const user = await UserModel.findOne({ email });
+  const user = await userModel.findOne({ email });
   if (!user) {
     return next(new Error("User not found!", { cause: 404 }));
   }
   const OTP = otp();
-  await UserModel.findOneAndUpdate(
+  await userModel.findOneAndUpdate(
     { email },
     {
       otp: Hash({ plainText: OTP }),
@@ -311,7 +313,7 @@ export const forgetPasswordOTP = asyncHandler(async (req, res, next) => {
 export const resetPasswordOTP = asyncHandler(async (req, res, next) => {
   const { userEmail } = req.params;
   const { otp, password } = req.body;
-  const user = await UserModel.findOne({ email: userEmail });
+  const user = await userModel.findOne({ email: userEmail });
   if (!user) {
     return next(new Error("User not found!", { cause: 404 }));
   }

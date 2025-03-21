@@ -1,4 +1,4 @@
-import UserModel from "../../DB/models/User.model.js";
+import userModel from "../../DB/models/User.model.js";
 import { asyncHandler } from "../utils/errorHandling.js";
 import { verifyToken } from "../utils/generateAndVerifyToken.js";
 
@@ -15,7 +15,7 @@ export const auth = (accessRoles = []) => {
     if (!decoded?.id) {
       return next(new Error("In-valid token payload", { cause: 401 }));
     }
-    const authUser = await UserModel.findById(decoded.id);
+    const authUser = await userModel.findById(decoded.id);
     if (!authUser) {
       return next(new Error("not register account", { cause: 401 }));
     }

@@ -6,6 +6,7 @@ import * as postController from "./controller/posts.controller.js";
 import {
   addPostSchema,
   addReactSchema,
+  addTagsToPostSchema,
   headersSchema,
   postIdSchema,
   privatePostSchema,
@@ -113,5 +114,32 @@ router.patch(
   auth(["admin", "user"]),
   isValid(privatePostSchema),
   postController.privatePost
+);
+
+//add tag to post
+router.patch(
+  "/addTagsToPost/:postId",
+  isValid(headersSchema, true),
+  auth(["admin", "user"]),
+  isValid(addTagsToPostSchema),
+  postController.addTagsToPost
+);
+
+//remove tag from post
+router.patch(
+  "/removeTagFromPost/:postId",
+  isValid(headersSchema, true),
+  auth(["admin", "user"]),
+  isValid(addTagsToPostSchema),
+  postController.removeTagFromPost
+);
+
+//get post by tag
+router.get(
+  "/getPostsByTag/:tagName",
+  isValid(headersSchema, true),
+  auth(["admin", "user"]),
+  isValid(getPostsByTagSchema),
+  postController.getPostsByTag
 );
 export default router;
